@@ -94,6 +94,11 @@ class OCRPredictor(nn.Module, _OCRPredictor):
 
         # Localize text elements
         loc_preds = self.det_predictor(pages, **kwargs)
+        assert all(
+            len(loc_pred) == 1 for loc_pred in loc_preds
+        ), "Detection Model in ocr_predictor should output only one class"
+
+        loc_preds = [list(loc_pred.values())[0] for loc_pred in loc_preds]
         # Check whether crop mode should be switched to channels first
         channels_last = len(pages) == 0 or isinstance(pages[0], np.ndarray)
 

@@ -41,7 +41,7 @@ class IndicData(VisionDataset):
         use_polygons: bool = False,
         recognition_task: bool = False,
         language: str = 'devanagari',
-        inp_path: str = './data/processed/',
+        inp_path: str = '../data/doctr-detection/Archive/val/', #'./data/processed'
         sets: str = 'test',
         **kwargs: Any,
     ) -> None:
@@ -64,13 +64,17 @@ class IndicData(VisionDataset):
         # subfolder = os.path.join(subfolder,sets)
         subfolder = inp_path
 
-
-        if(sets!='test'):
-            text_data= json.load(open(os.path.join(subfolder,'labels.json')))
-            box_data= json.load(open(os.path.join(subfolder,'dimensions.json')))
-            tmp_root = os.path.join(subfolder, "images")
-        else:
-            tmp_root = subfolder
+        # labels.json contains dict_keys(['img_dimensions', 'img_hash', 'polygons'])
+        # there is no dimensions.json
+        text_data= json.load(open(os.path.join(subfolder,'labels.json')))
+        tmp_root = os.path.join(subfolder, "images")
+        
+        # if(sets!='test'):
+        #     text_data= json.load(open(os.path.join(subfolder,'labels.json')))
+        #     box_data= json.load(open(os.path.join(subfolder,'dimensions.json')))
+        #     tmp_root = os.path.join(subfolder, "images")
+        # else:
+        #     tmp_root = subfolder
 
         # # List images
         self.data: List[Tuple[Union[str, np.ndarray], Union[str, Dict[str, Any]]]] = []
@@ -81,17 +85,29 @@ class IndicData(VisionDataset):
             if not os.path.exists(os.path.join(tmp_root, img_path)):
                 raise FileNotFoundError(f"unable to locate {os.path.join(tmp_root, img_path)}")
 
-            if(sets!='test'):
-                text_targets = [text_data[img_path]]
-                box_targets = [box_data[img_path]]
-                image_names = [img_path]
-            else:
-                text_targets = [""]
-                im = Image.open(os.path.join(tmp_root, img_path))
-                width, height = im.size
-                box = [0 , 0, width, height]
-                box_targets = [box]
-                image_names = [img_path]
+            
+            _targets = [
+                (f'{img_path}_{word_num}',box[0]+box[3])
+                # for filename in text_data
+                for word_num,box in enumerate(text_data[img_path]['polygons'])
+            ]
+            # All the bounding boxes in Funsd are represented by their coordinates 
+            # following the schema box = [xleft, ytop, xright, ybottom].
+            
+            # to get a list of words and their respective coordinates separately
+            target_word_num, box_targets = zip(*_targets)
+            
+            # if(sets!='test'):
+            #     text_targets = [text_data[img_path]]
+            #     box_targets = [box_data[img_path]]
+            #     image_names = [img_path]
+            # else:
+            #     text_targets = [""]
+            #     im = Image.open(os.path.join(tmp_root, img_path))
+            #     width, height = im.size
+            #     box = [0 , 0, width, height]
+            #     box_targets = [box]
+            #     image_names = [img_path]
 
             if use_polygons:
                 # xmin, ymin, xmax, ymax -> (x, y) coordinates of top left, top right, bottom right, bottom left corners
@@ -105,19 +121,19 @@ class IndicData(VisionDataset):
                     for box in box_targets
                 ]
 
-            if recognition_task:
-                crops = crop_bboxes_from_image(
-                    img_path=os.path.join(tmp_root, img_path), geoms=np.asarray(box_targets, dtype=np_dtype)
-                )
-                for crop, label, name in zip(crops, list(text_targets), list(image_names)):
-                    # filter labels with unknown characters
-                    if not any(char in label for char in ["☑", "☐", "\uf703", "\uf702"]):
-                        self.data.append((crop, label, name))
+            # if recognition_task:
+            #     crops = crop_bboxes_from_image(
+            #         img_path=os.path.join(tmp_root, img_path), geoms=np.asarray(box_targets, dtype=np_dtype)
+            #     )
+            #     for crop, label, name in zip(crops, list(text_targets), list(image_names)):
+            #         # filter labels with unknown characters
+            #         if not any(char in label for char in ["☑", "☐", "\uf703", "\uf702"]):
+            #             self.data.append((crop, label, name))
             else:
                 self.data.append(
                     (
                         img_path,
-                        dict(boxes=np.asarray(box_targets, dtype=np_dtype), labels=list(text_targets), images=list(image_names)),
+                        dict(boxes=np.asarray(box_targets, dtype=np_dtype), labels=list(target_word_num), images=list(target_word_num)),
                     )
                 )
         self.root = tmp_root

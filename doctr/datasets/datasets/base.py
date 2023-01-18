@@ -8,6 +8,9 @@ import shutil
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Tuple, Union
 
+import numpy as np
+
+from doctr.file_utils import copy_tensor
 from doctr.io.image import get_img_shape
 from doctr.utils.data import download_from_url
 
@@ -45,7 +48,7 @@ class _AbstractDataset:
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
 
         # Read image
-        img, target, name = self._read_sample(index)
+        img, target = self._read_sample(index)
         # Pre-transforms (format conversion at run-time etc.)
         if self._pre_transforms is not None:
             img, target = self._pre_transforms(img, target)
@@ -55,9 +58,15 @@ class _AbstractDataset:
             img = self.img_transforms(img)
 
         if self.sample_transforms is not None:
-            img, target = self.sample_transforms(img, target)
+            if isinstance(target, dict) and all([isinstance(item, np.ndarray) for item in target.values()]):
+                img_transformed = copy_tensor(img)
+                for class_name, bboxes in target.items():
+                    img_transformed, target[class_name] = self.sample_transforms(img, bboxes)
+                img = img_transformed
+            else:
+                img, target = self.sample_transforms(img, target)
 
-        return img, target, name
+        return img, target
 
     def extra_repr(self) -> str:
         return ""
@@ -114,6 +123,6 @@ class _VisionDataset(_AbstractDataset):
             archive_path = Path(archive_path)
             dataset_path = archive_path.parent.joinpath(archive_path.stem)
             if not dataset_path.is_dir() or overwrite:
-                shutil.unpack_archive(archive_path, dataset_path, "zip")
+                shutil.unpack_archive(archive_path, dataset_path)
 
         super().__init__(dataset_path if extract_archive else archive_path, **kwargs)
