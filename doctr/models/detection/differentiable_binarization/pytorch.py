@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from typing import Any, Callable, Dict, List, Optional
+import logging
 
 import numpy as np
 import torch
@@ -16,10 +17,10 @@ from torchvision.ops.deform_conv import DeformConv2d
 from doctr.file_utils import CLASS_NAME
 
 from ...classification import mobilenet_v3_large
-from ...utils import load_pretrained_params
+from ...utils import load_pretrained_params_from_dir,load_pretrained_params
 from .base import DBPostProcessor, _DBNet
 
-__all__ = ["DBNet", "db_resnet50", "db_resnet34", "db_mobilenet_v3_large", "db_resnet50_rotation"]
+__all__ = ["DBNet", "db_resnet50", "db_resnet34", "db_mobilenet_v3_large", "db_resnet50_rotation","db_resnet50_devanagari"]
 
 
 default_cfgs: Dict[str, Dict[str, Any]] = {
@@ -51,10 +52,9 @@ default_cfgs: Dict[str, Dict[str, Any]] = {
         "input_shape": (3, 1024, 1024),
         "mean": (0.798, 0.785, 0.772),
         "std": (0.264, 0.2749, 0.287),
-        "url": "https://doctr-static.mindee.com/models?id=v0.4.1/db_resnet50-1138863a.pt&src=0",
+        "url": "https://drive.google.com/file/d/1YxtYAacI2Ba2lSynP4EWvUsbUKMOtZfo/view?usp=share_link",
     },
 }
-
 
 class FeaturePyramidNetwork(nn.Module):
     def __init__(
@@ -297,6 +297,7 @@ def _dbnet(
     fpn_layers: List[str],
     backbone_submodule: Optional[str] = None,
     pretrained_backbone: bool = True,
+    model_path: Optional[str] = "",
     **kwargs: Any,
 ) -> DBNet:
 
@@ -320,9 +321,13 @@ def _dbnet(
     # Build the model
     model = DBNet(feat_extractor, cfg=default_cfgs[arch], **kwargs)
     # Load pretrained parameters
-    if pretrained:
+    if pretrained and len(model_path)==0:
+        logging.info(f"model being loaded from url.")
         load_pretrained_params(model, default_cfgs[arch]["url"])
-
+    elif pretrained and len(model_path)!=0:
+        logging.info(f"model being loaded from {model_path}.")
+        print("from path")
+        load_pretrained_params_from_dir(model, model_path)
     return model
 
 
@@ -431,5 +436,33 @@ def db_resnet50_rotation(pretrained: bool = False, **kwargs: Any) -> DBNet:
         resnet50,
         ["layer1", "layer2", "layer3", "layer4"],
         None,
+        **kwargs,
+    )
+
+def db_resnet50_devanagari(pretrained: bool = False, **kwargs: Any) -> DBNet:
+    """DBNet as described in `"Real-time Scene Text Detection with Differentiable Binarization"
+    <https://arxiv.org/pdf/1911.08947.pdf>`_, using a ResNet-50 backbone.
+    This model is trained with rotated documents
+
+    >>> import torch
+    >>> from doctr.models import db_resnet50_devanagari
+    >>> model = db_resnet50_rotation(pretrained=True)
+    >>> input_tensor = torch.rand((1, 3, 1024, 1024), dtype=torch.float32)
+    >>> out = model(input_tensor)
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on our text detection dataset
+
+    Returns:
+        text detection architecture
+    """
+
+    return _dbnet(
+        arch="db_resnet50_devanagari",
+        pretrained=pretrained,
+        backbone_fn=resnet50,
+        fpn_layers=["layer1", "layer2", "layer3", "layer4"],
+        backbone_submodule=None,
+        model_path='/media/ashatya/Data/work/iit-bombay/indic-doctr/models/db_resnet50_20230122-023012.pt',
         **kwargs,
     )

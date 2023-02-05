@@ -74,3 +74,19 @@ Running the training script should look like this for multiple custom fonts:
 ```shell
 python references/recognition/train_pytorch.py crnn_vgg16_bn --epochs 5 --font "custom-font-1.ttf,custom-font-2.ttf"
 ```
+## Training  for Indic Languages
+Training for Indic Languages will require appropriate vocab.<br>
+Vocabs of the following Indic language scripts have been provided.
+```
+1. Bengali
+2. Gujarati
+3. Gurumukhi
+4. Kannada
+5. Malayalam
+6. Odia
+7. Tamil
+8. Telugu
+9. Urdu
+10. Hindi/Devanagari/Sanskrit
+```
+Fonts have not been provided for the Indic languages yet. You may install them and chose the following command to let `doctr` detect the relevant fonts.<br>

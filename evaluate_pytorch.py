@@ -63,7 +63,7 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
 def main(args):
 
     #print(args)
-
+    
     if not isinstance(args.workers, int):
         args.workers = min(16, mp.cpu_count())
 
@@ -160,9 +160,10 @@ def parse_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
-    parser.add_argument("arch", type=str, help="text-detection model to evaluate")
+    parser.add_argument("--arch", type=str, help="text-detection model to evaluate")
     parser.add_argument("--dataset", type=str, default="FUNSD", help="Dataset to evaluate on")
     parser.add_argument("-b", "--batch_size", type=int, default=2, help="batch size for evaluation")
+    parser.add_argument("--model",default=None, type=str, help="path to the trained model")
     parser.add_argument("--device", default=None, type=int, help="device")
     parser.add_argument("--size", type=int, default=None, help="model input size, H = W")
     parser.add_argument("-j", "--workers", type=int, default=None, help="number of workers used for dataloading")

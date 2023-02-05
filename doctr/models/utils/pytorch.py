@@ -11,8 +11,22 @@ from torch import nn
 
 from doctr.utils.data import download_from_url
 
-__all__ = ["load_pretrained_params", "conv_sequence_pt", "export_model_to_onnx"]
+__all__ = ["load_pretrained_params_from_dir","load_pretrained_params", "conv_sequence_pt", "export_model_to_onnx"]
 
+
+def load_pretrained_params_from_dir(
+    model: nn.Module,
+    model_path: Optional[str] = None,
+) -> None:
+    """Loads the model if the preatrained model is saved in a local directory
+
+    Args:
+        model (nn.Module): the PyTorch model to be loaded
+        model_path (Optional[str], optional): path of the state. Defaults to None.
+    """
+    state_dict = torch.load(model_path, map_location="cpu")
+    
+    model.load_state_dict(state_dict)
 
 def load_pretrained_params(
     model: nn.Module,
