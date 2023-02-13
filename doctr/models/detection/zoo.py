@@ -25,9 +25,11 @@ elif is_torch_available():
         "db_resnet34",
         "db_resnet50",
         "db_mobilenet_v3_large",
+        "db_resnet50_devanagari",
         "linknet_resnet18",
         "linknet_resnet34",
         "linknet_resnet50",
+
     ]
     ROT_ARCHS = ["db_resnet50_rotation"]
 

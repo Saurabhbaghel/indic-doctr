@@ -17,6 +17,7 @@ __all__ = ["load_pretrained_params_from_dir","load_pretrained_params", "conv_seq
 def load_pretrained_params_from_dir(
     model: nn.Module,
     model_path: Optional[str] = None,
+    ignore_keys: Optional[list[str]] = None
 ) -> None:
     """Loads the model if the preatrained model is saved in a local directory
 
@@ -26,7 +27,17 @@ def load_pretrained_params_from_dir(
     """
     state_dict = torch.load(model_path, map_location="cpu")
     
-    model.load_state_dict(state_dict)
+    # Remove weights from the state_dict
+    if ignore_keys is not None and len(ignore_keys) > 0:
+        for key in ignore_keys:
+            state_dict.pop(key)
+        missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+        if set(missing_keys) != set(ignore_keys) or len(unexpected_keys) > 0:
+            raise ValueError("unable to load state_dict, due to non-matching keys.")
+    else:
+        # Load weights
+        model.load_state_dict(state_dict)
+    
 
 def load_pretrained_params(
     model: nn.Module,

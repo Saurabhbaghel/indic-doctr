@@ -19,7 +19,7 @@ __all__ = ["DBPostProcessor"]
 
 class DBPostProcessor(DetectionPostProcessor):
     """Implements a post processor for DBNet adapted from the implementation of `xuannianz
-    <https://github.com/xuannianz/DifferentiableBinarization>`_.
+    <https://github.com/xuannianz/DifferentiableBinarization>`.
 
     Args:
         unclip ratio: ratio used to unshrink polygons
@@ -172,7 +172,7 @@ class _DBNet:
     @staticmethod
     def compute_distance(
         xs: np.ndarray,
-        ys: np.ndarray,
+        ys: np.ndarray,compute_distance,
         a: np.ndarray,
         b: np.ndarray,
         eps: float = 1e-7,
@@ -205,7 +205,7 @@ class _DBNet:
         canvas: np.ndarray,
         mask: np.ndarray,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Draw a polygon treshold map on a canvas, as described in the DB paper
+        """Draw a polygon threshold map on a canvas, as described in the DB paper
 
         Args:
             polygon : array of coord., to draw the boundary of the polygon

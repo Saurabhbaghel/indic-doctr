@@ -14,10 +14,13 @@ from torch.nn import functional as F
 from doctr.datasets import VOCABS, decode_sequence
 
 from ...classification import mobilenet_v3_large_r, mobilenet_v3_small_r, vgg16_bn_r
-from ...utils.pytorch import load_pretrained_params
+from ...utils.pytorch import load_pretrained_params, load_pretrained_params_from_dir
 from ..core import RecognitionModel, RecognitionPostProcessor
 
-__all__ = ["CRNN", "crnn_vgg16_bn", "crnn_mobilenet_v3_small", "crnn_mobilenet_v3_large"]
+__all__ = [
+    "CRNN", "crnn_vgg16_bn", "crnn_mobilenet_v3_small", 
+    "crnn_mobilenet_v3_large", "crnn_vgg16_bn_devanagari"
+    ]
 
 default_cfgs: Dict[str, Dict[str, Any]] = {
     "crnn_vgg16_bn": {
@@ -40,6 +43,13 @@ default_cfgs: Dict[str, Dict[str, Any]] = {
         "input_shape": (3, 32, 128),
         "vocab": VOCABS["french"],
         "url": "https://doctr-static.mindee.com/models?id=v0.3.1/crnn_mobilenet_v3_large_pt-f5259ec2.pt&src=0",
+    },
+    "crnn_vgg16_bn_devanagari": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["devanagari"],
+        "url": "https://doctr-static.mindee.com/models?id=v0.3.1/crnn_vgg16_bn-9762b0b0.pt&src=0",
     },
 }
 
@@ -235,10 +245,12 @@ def _crnn(
     backbone_fn: Callable[[Any], nn.Module],
     pretrained_backbone: bool = True,
     ignore_keys: Optional[List[str]] = None,
+    model_path: Optional[str] = "",
     **kwargs: Any,
 ) -> CRNN:
 
     pretrained_backbone = pretrained_backbone and not pretrained
+
 
     # Feature extractor
     feat_extractor = backbone_fn(pretrained=pretrained_backbone).features  # type: ignore[call-arg]
@@ -253,12 +265,13 @@ def _crnn(
     # Build the model
     model = CRNN(feat_extractor, cfg=_cfg, **kwargs)  # type: ignore[arg-type]
     # Load pretrained parameters
-    if pretrained:
+    if pretrained and len(model_path) == 0:
         # The number of classes is not the same as the number of classes in the pretrained model =>
         # remove the last layer weights
         _ignore_keys = ignore_keys if _cfg["vocab"] != default_cfgs[arch]["vocab"] else None
         load_pretrained_params(model, _cfg["url"], ignore_keys=_ignore_keys)
-
+    elif pretrained and len(model_path) != 0:
+        load_pretrained_params_from_dir(model, model_path)
     return model
 
 
@@ -330,5 +343,32 @@ def crnn_mobilenet_v3_large(pretrained: bool = False, **kwargs: Any) -> CRNN:
         pretrained,
         mobilenet_v3_large_r,
         ignore_keys=["linear.weight", "linear.bias"],
+        **kwargs,
+    )
+   
+    
+def crnn_vgg16_bn_devanagari(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    """CRNN with a MobileNet V3 Large backbone as described in `"An End-to-End Trainable Neural Network for Image-based
+    Sequence Recognition and Its Application to Scene Text Recognition" <https://arxiv.org/pdf/1507.05717.pdf>`_.
+
+    >>> import torch
+    >>> from doctr.models import crnn_mobilenet_v3_large
+    >>> model = crnn_mobilenet_v3_large(pretrained=True)
+    >>> input_tensor = torch.rand(1, 3, 32, 128)
+    >>> out = model(input_tensor)
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on our text recognition dataset
+
+    Returns:
+        text recognition architecture
+    """
+
+    return _crnn(
+        "crnn_vgg16_bn_devanagari",
+        pretrained,
+        vgg16_bn_r,
+        ignore_keys=["linear.weight", "linear.bias"],
+        model_path="/media/ashatya/Data/work/iit-bombay/crnn_vgg16_bn_printed_hindi.pt",
         **kwargs,
     )

@@ -17,11 +17,13 @@ from torchvision.ops.deform_conv import DeformConv2d
 from doctr.file_utils import CLASS_NAME
 
 from ...classification import mobilenet_v3_large
-from ...utils import load_pretrained_params_from_dir,load_pretrained_params
+from ...utils import load_pretrained_params_from_dir, load_pretrained_params
 from .base import DBPostProcessor, _DBNet
 
-__all__ = ["DBNet", "db_resnet50", "db_resnet34", "db_mobilenet_v3_large", "db_resnet50_rotation","db_resnet50_devanagari"]
-
+__all__ = [
+    "DBNet", "db_resnet50", "db_resnet34",
+    "db_mobilenet_v3_large", "db_resnet50_rotation", "db_resnet50_devanagari"
+]
 
 default_cfgs: Dict[str, Dict[str, Any]] = {
     "db_resnet50": {
@@ -53,15 +55,17 @@ default_cfgs: Dict[str, Dict[str, Any]] = {
         "mean": (0.798, 0.785, 0.772),
         "std": (0.264, 0.2749, 0.287),
         "url": "https://drive.google.com/file/d/1YxtYAacI2Ba2lSynP4EWvUsbUKMOtZfo/view?usp=share_link",
+        # "url": "https://github.com/Saurabhbaghel/indic-doctr/releases/download/devanagari-detection-model/db_resnet50_20230122-023012.pt"
     },
 }
 
+
 class FeaturePyramidNetwork(nn.Module):
     def __init__(
-        self,
-        in_channels: List[int],
-        out_channels: int,
-        deform_conv: bool = False,
+            self,
+            in_channels: List[int],
+            out_channels: int,
+            deform_conv: bool = False,
     ) -> None:
 
         super().__init__()
@@ -87,7 +91,7 @@ class FeaturePyramidNetwork(nn.Module):
                     conv_layer(out_channels, out_chans, 3, padding=1, bias=False),
                     nn.BatchNorm2d(out_chans),
                     nn.ReLU(inplace=True),
-                    nn.Upsample(scale_factor=2**idx, mode="bilinear", align_corners=True),
+                    nn.Upsample(scale_factor=2 ** idx, mode="bilinear", align_corners=True),
                 )
                 for idx, chans in enumerate(in_channels)
             ]
@@ -123,15 +127,15 @@ class DBNet(_DBNet, nn.Module):
     """
 
     def __init__(
-        self,
-        feat_extractor: IntermediateLayerGetter,
-        head_chans: int = 256,
-        deform_conv: bool = False,
-        bin_thresh: float = 0.3,
-        assume_straight_pages: bool = True,
-        exportable: bool = False,
-        cfg: Optional[Dict[str, Any]] = None,
-        class_names: List[str] = [CLASS_NAME],
+            self,
+            feat_extractor: IntermediateLayerGetter,
+            head_chans: int = 256,
+            deform_conv: bool = False,
+            bin_thresh: float = 0.3,
+            assume_straight_pages: bool = True,
+            exportable: bool = False,
+            cfg: Optional[Dict[str, Any]] = None,
+            class_names: List[str] = [CLASS_NAME],
     ) -> None:
 
         super().__init__()
@@ -192,11 +196,11 @@ class DBNet(_DBNet, nn.Module):
                 m.bias.data.zero_()
 
     def forward(
-        self,
-        x: torch.Tensor,
-        target: Optional[List[np.ndarray]] = None,
-        return_model_output: bool = False,
-        return_preds: bool = False,
+            self,
+            x: torch.Tensor,
+            target: Optional[List[np.ndarray]] = None,
+            return_model_output: bool = False,
+            return_preds: bool = False,
     ) -> Dict[str, torch.Tensor]:
         # Extract feature maps at different stages
         feats = self.feat_extractor(x)
@@ -269,7 +273,7 @@ class DBNet(_DBNet, nn.Module):
             positive_count = seg_target[seg_mask].sum()
             negative_count = torch.minimum(neg_target.sum(), 3.0 * positive_count)
             negative_loss = bce_loss * neg_target
-            negative_loss = negative_loss.sort().values[-int(negative_count.item()) :]
+            negative_loss = negative_loss.sort().values[-int(negative_count.item()):]
             sum_losses = torch.sum(bce_loss * seg_target[seg_mask]) + torch.sum(negative_loss)
             balanced_bce_loss = sum_losses / (positive_count + negative_count + 1e-6)
 
@@ -291,16 +295,15 @@ class DBNet(_DBNet, nn.Module):
 
 
 def _dbnet(
-    arch: str,
-    pretrained: bool,
-    backbone_fn: Callable[[bool], nn.Module],
-    fpn_layers: List[str],
-    backbone_submodule: Optional[str] = None,
-    pretrained_backbone: bool = True,
-    model_path: Optional[str] = "",
-    **kwargs: Any,
+        arch: str,
+        pretrained: bool,
+        backbone_fn: Callable[[bool], nn.Module],
+        fpn_layers: List[str],
+        backbone_submodule: Optional[str] = None,
+        pretrained_backbone: bool = True,
+        model_path: Optional[str] = "",
+        **kwargs: Any,
 ) -> DBNet:
-
     # Starting with Imagenet pretrained params introduces some NaNs in layer3 & layer4 of resnet50
     pretrained_backbone = pretrained_backbone and not arch.split("_")[1].startswith("resnet")
     pretrained_backbone = pretrained_backbone and not pretrained
@@ -321,10 +324,10 @@ def _dbnet(
     # Build the model
     model = DBNet(feat_extractor, cfg=default_cfgs[arch], **kwargs)
     # Load pretrained parameters
-    if pretrained and len(model_path)==0:
+    if pretrained and len(model_path) == 0:
         logging.info(f"model being loaded from url.")
         load_pretrained_params(model, default_cfgs[arch]["url"])
-    elif pretrained and len(model_path)!=0:
+    elif pretrained and len(model_path) != 0:
         logging.info(f"model being loaded from {model_path}.")
         print("from path")
         load_pretrained_params_from_dir(model, model_path)
@@ -439,6 +442,7 @@ def db_resnet50_rotation(pretrained: bool = False, **kwargs: Any) -> DBNet:
         **kwargs,
     )
 
+
 def db_resnet50_devanagari(pretrained: bool = False, **kwargs: Any) -> DBNet:
     """DBNet as described in `"Real-time Scene Text Detection with Differentiable Binarization"
     <https://arxiv.org/pdf/1911.08947.pdf>`_, using a ResNet-50 backbone.
@@ -463,6 +467,7 @@ def db_resnet50_devanagari(pretrained: bool = False, **kwargs: Any) -> DBNet:
         backbone_fn=resnet50,
         fpn_layers=["layer1", "layer2", "layer3", "layer4"],
         backbone_submodule=None,
-        model_path='/media/ashatya/Data/work/iit-bombay/indic-doctr/models/db_resnet50_20230122-023012.pt',
+        model_path='/media/ashatya/Data/work/iit-bombay/models/db_resnet50_20230122-023012.pt',
+        # model_path='https://github.com/Saurabhbaghel/indic-doctr/releases/download/devanagari-detection-model/db_resnet50_20230122-023012.pt',
         **kwargs,
     )

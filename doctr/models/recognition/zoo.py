@@ -18,6 +18,7 @@ ARCHS: List[str] = [
     "crnn_vgg16_bn",
     "crnn_mobilenet_v3_small",
     "crnn_mobilenet_v3_large",
+    "crnn_vgg16_bn_devanagari",
     "sar_resnet31",
     "master",
     "vitstr_small",
