@@ -29,6 +29,7 @@ elif is_torch_available():
         "linknet_resnet18",
         "linknet_resnet34",
         "linknet_resnet50",
+        "textron"
 
     ]
     ROT_ARCHS = ["db_resnet50_rotation"]
@@ -61,14 +62,18 @@ def _predictor(arch: Any, pretrained: bool, assume_straight_pages: bool = True, 
         _model.assume_straight_pages = assume_straight_pages
 
     kwargs.pop("pretrained_backbone", None)
-
-    kwargs["mean"] = kwargs.get("mean", _model.cfg["mean"])
-    kwargs["std"] = kwargs.get("std", _model.cfg["std"])
-    kwargs["batch_size"] = kwargs.get("batch_size", 1)
-    predictor = DetectionPredictor(
-        PreProcessor(_model.cfg["input_shape"][:-1] if is_tf_available() else _model.cfg["input_shape"][1:], **kwargs),
-        _model,
-    )
+    
+    if _model.__name__() != "textron":
+        kwargs["mean"] = kwargs.get("mean", _model.cfg["mean"])
+        kwargs["std"] = kwargs.get("std", _model.cfg["std"])
+        kwargs["batch_size"] = kwargs.get("batch_size", 1)
+    
+        predictor = DetectionPredictor(
+            PreProcessor(_model.cfg["input_shape"][:-1] if is_tf_available() else _model.cfg["input_shape"][1:], **kwargs),
+            _model,
+        )
+    else:
+        predictor = DetectionPredictor(model=_model)
     return predictor
 
 

@@ -293,6 +293,8 @@ class DBNet(_DBNet, nn.Module):
 
         return l1_scale * l1_loss + bce_scale * balanced_bce_loss + dice_loss
 
+    def __name__(self):
+        return "dbnet"
 
 def _dbnet(
         arch: str,

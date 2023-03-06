@@ -243,6 +243,8 @@ class LinkNet(nn.Module, _LinkNet):
         # Return the full loss (equal sum of focal loss and dice loss)
         return focal_loss + dice_loss
 
+    def __name__(self):
+        return "linknet"
 
 def _linknet(
     arch: str,

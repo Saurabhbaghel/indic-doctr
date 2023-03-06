@@ -8,6 +8,7 @@ from typing import Any, List, Union
 import numpy as np
 import torch
 from torch import nn
+from torchvision import io
 
 from doctr.io.elements import Document
 from doctr.models._utils import estimate_orientation, get_language
@@ -67,11 +68,12 @@ class OCRPredictor(nn.Module, _OCRPredictor):
         **kwargs: Any,
     ) -> Document:
 
-        # Dimension check
-        if any(page.ndim != 3 for page in pages):
-            raise ValueError("incorrect input shape: all pages are expected to be multi-channel 2D images.")
+        if self.det_predictor.model.__name__()!= "textron":
+            # Dimension check
+            if any(page.ndim != 3 for page in pages):
+                raise ValueError("incorrect input shape: all pages are expected to be multi-channel 2D images.")
 
-        origin_page_shapes = [page.shape[:2] if isinstance(page, np.ndarray) else page.shape[-2:] for page in pages]
+            origin_page_shapes = [page.shape[:2] if isinstance(page, np.ndarray) else page.shape[-2:] for page in pages]
 
         # Detect document rotation and rotate pages
         if self.detect_orientation:
@@ -94,11 +96,17 @@ class OCRPredictor(nn.Module, _OCRPredictor):
 
         # Localize text elements
         loc_preds = self.det_predictor(pages, **kwargs)
-        assert all(
-            len(loc_pred) == 1 for loc_pred in loc_preds
-        ), "Detection Model in ocr_predictor should output only one class"
+        if self.det_predictor.model.__name__() != "textron":
+            assert all(
+                len(loc_pred) == 1 for loc_pred in loc_preds
+            ), "Detection Model in ocr_predictor should output only one class"
+        
+            loc_preds = [list(loc_pred.values())[0] for loc_pred in loc_preds]
 
-        loc_preds = [list(loc_pred.values())[0] for loc_pred in loc_preds]
+        else:
+            # TODO add for multiple num of pages too
+            pages = list(io.read_image(pages))
+        
         # Check whether crop mode should be switched to channels first
         channels_last = len(pages) == 0 or isinstance(pages[0], np.ndarray)
 

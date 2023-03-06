@@ -24,8 +24,8 @@ class DetectionPredictor(nn.Module):
 
     def __init__(
         self,
-        pre_processor: PreProcessor,
-        model: nn.Module,
+        pre_processor: Union[PreProcessor, None] = None,
+        model: Union[nn.Module, None] = None
     ) -> None:
 
         super().__init__()
@@ -35,17 +35,23 @@ class DetectionPredictor(nn.Module):
     @torch.no_grad()
     def forward(
         self,
-        pages: List[Union[np.ndarray, torch.Tensor]],
+        pages: Union[List[Union[np.ndarray, torch.Tensor]], str],
         **kwargs: Any,
     ) -> List[np.ndarray]:
 
-        # Dimension check
-        if any(page.ndim != 3 for page in pages):
-            raise ValueError("incorrect input shape: all pages are expected to be multi-channel 2D images.")
+        
+        if self.model.__name__() != "textron":
+            # Dimension check
+            if any(page.ndim != 3 for page in pages):
+                raise ValueError("incorrect input shape: all pages are expected to be multi-channel 2D images.")
 
-        processed_batches = self.pre_processor(pages)
-        _device = next(self.model.parameters()).device
-        predicted_batches = [
-            self.model(batch.to(device=_device), return_preds=True, **kwargs)["preds"] for batch in processed_batches
-        ]
-        return [pred for batch in predicted_batches for pred in batch]
+            # if the model is some other model
+            processed_batches = self.pre_processor(pages)
+            _device = next(self.model.parameters()).device
+            predicted_batches = [
+                self.model(batch.to(device=_device), return_preds=True, **kwargs)["preds"] for batch in processed_batches
+            ]
+            return [pred for batch in predicted_batches for pred in batch]
+        else:
+            # if it is textron
+            return self.model(pages)
